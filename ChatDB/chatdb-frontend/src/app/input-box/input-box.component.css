@@ -1,0 +1,19 @@
+.input-box {
+    display: flex;
+    padding: 0.5rem;
+    background-color: #fff;
+    border-top: 1px solid #ddd;
+  }
+  
+  input {
+    flex-grow: 1;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  
+  button {
+    margin-left: 0.5rem;
+    padding: 0.5rem 1rem;
+  }
+  

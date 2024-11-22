@@ -1,0 +1,16 @@
+.user-message {
+    text-align: right;
+    margin-bottom: 1rem;
+    background-color: #d4e6ff;
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
+  
+  .db-message {
+    text-align: left;
+    margin-bottom: 1rem;
+    background-color: #f1f0f0;
+    padding: 0.5rem;
+    border-radius: 8px;
+  }
+  
