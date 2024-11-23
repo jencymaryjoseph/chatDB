@@ -2,9 +2,15 @@ from flask import Flask, request, jsonify
 import mysql.connector
 from pymongo import MongoClient
 import csv
+from flask_cors import CORS
+
+import queryMapper as q1
+
+
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Allow up to 16MB
+CORS(app)
 
 # Local MySQL Connection
 mysql_conn = mysql.connector.connect(
@@ -80,6 +86,7 @@ def upload_json_to_mongodb():
 def execute_mysql_query():
     try:
         query = request.json['query']
+        print(q1.parse_and_generate_sql("get model of cars made by Toyota where in year 2019"))
         cursor = mysql_conn.cursor(dictionary=True)
         cursor.execute(query)
         results = cursor.fetchall()
@@ -122,6 +129,7 @@ def get_mysql_metadata():
         return jsonify(metadata)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 # Fetch MongoDB Metadata
 @app.route('/metadata/mongodb', methods=['GET'])
@@ -171,4 +179,4 @@ def delete_mongodb_collection():
 
 # Run the Flask App
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host='0.0.0.0', port=5004, debug=True)

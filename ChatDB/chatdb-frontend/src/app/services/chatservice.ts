@@ -1,28 +1,51 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable } from 'rxjs';
 
 @Injectable({
-  providedIn: 'root',
+  providedIn: 'root'
 })
 export class ChatService {
-  private _messages = new BehaviorSubject<{ sender: string, content: string }[]>([]);
-  messages = this._messages.asObservable();
+  private baseUrl = 'http://localhost:5004'; // Flask backend base URL
+  private messagesSubject = new BehaviorSubject<{ sender: string, content: string }[]>([]);
+  private isLoadingSubject = new BehaviorSubject<boolean>(false);
 
-  private _isLoading = new BehaviorSubject<boolean>(false);
-  isLoading = this._isLoading.asObservable();
+  messages$ = this.messagesSubject.asObservable();
+  isLoading$ = this.isLoadingSubject.asObservable();
 
-  addUserMessage(content: string) {
-    this.addMessage({ sender: 'user', content });
-    this._isLoading.next(true);
-
-    // Simulate response from ChatDB
-    setTimeout(() => {
-      this.addMessage({ sender: 'db', content: 'Response from ChatDB' });
-      this._isLoading.next(false);
-    }, 1000);
+  constructor(private http: HttpClient) {}
+  
+  sendMessageToMongoDB(query: any): void {
+    this.isLoadingSubject.next(true); // Show the loading spinner
+    this.http.post(`${this.baseUrl}/query/mongodb`, query).subscribe(
+      (response) => {
+        console.log('Response from backend:', response); // Debug log
+        this.addMessage({
+          sender: 'db',
+          content: JSON.stringify(response, null, 2) // Format response for readability
+        });
+        this.isLoadingSubject.next(false); // Hide the loading spinner
+      },
+      (error) => {
+        console.error('Error sending message to MongoDB:', error); // Debug log
+        this.addMessage({
+          sender: 'db',
+          content: `Error: ${error.message}`
+        });
+        this.isLoadingSubject.next(false); // Hide the loading spinner
+      }
+    );
   }
 
-  private addMessage(message: { sender: string, content: string }) {
-    this._messages.next([...this._messages.value, message]);
+  fetchMongoDBMetadata(): Observable<any> {
+    console.log('Sending request to fetch MongoDB metadata...');
+    return this.http.get(`${this.baseUrl}/metadata/mongodb`);
+  }
+  
+
+  public addMessage(message: { sender: string, content: string }): void {
+    const currentMessages = this.messagesSubject.value;
+    this.messagesSubject.next([...currentMessages, message]);
   }
 }
+

@@ -7,6 +7,8 @@ import { ChatWindowComponent } from './chat-window/chat-window.component';
 import { ChatMessageComponent } from './chat-message/chat-message.component';
 import { InputBoxComponent } from './input-box/input-box.component';
 import { LoadingSpinnerComponent } from './loading-spinner/loading-spinner.component';
+import { HttpClientModule } from '@angular/common/http';
+import { ChatService } from './services/chatservice';
 
 @NgModule({
   declarations: [
@@ -14,13 +16,14 @@ import { LoadingSpinnerComponent } from './loading-spinner/loading-spinner.compo
     ChatWindowComponent,
     ChatMessageComponent,
     InputBoxComponent,
-    LoadingSpinnerComponent,
+    LoadingSpinnerComponent
   ],
   imports: [
     BrowserModule,
     FormsModule,  // Required for ngModel in InputBoxComponent
+    HttpClientModule  
   ],
-  providers: [],
+  providers: [ChatService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
