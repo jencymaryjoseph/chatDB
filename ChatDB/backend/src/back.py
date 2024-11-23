@@ -4,6 +4,7 @@ from pymongo import MongoClient
 import csv
 
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Allow up to 16MB
 
 # Local MySQL Connection
 mysql_conn = mysql.connector.connect(
@@ -50,37 +51,29 @@ def upload_to_mysql():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-
-
 # Upload Dataset to MongoDB
 import json
 
 @app.route('/upload/mongodb', methods=['POST'])
 def upload_json_to_mongodb():
     try:
-        # Access the uploaded JSON file
         file = request.files['file']
         collection_name = request.form['collection']
-        
-        # Parse the JSON file
-        file_data = json.load(file)  # Load JSON content directly
+
+        # Load JSON file content
+        file_data = json.load(file)  # Read and parse the JSON content
         if isinstance(file_data, list):  # Ensure it's a list of documents
             documents = file_data
         else:
             return jsonify({"error": "The uploaded JSON must be an array of objects."}), 400
 
-        # Insert the data into MongoDB
+        # Insert documents into MongoDB
         collection = mongo_db[collection_name]
         collection.insert_many(documents)
 
         return jsonify({"message": "JSON data uploaded successfully to MongoDB."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-
-
 
 # Execute Query in MySQL
 @app.route('/query/mysql', methods=['POST'])
@@ -115,8 +108,6 @@ def execute_mongodb_query():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-
 # Fetch MySQL Metadata
 @app.route('/metadata/mysql', methods=['GET'])
 def get_mysql_metadata():
@@ -131,7 +122,6 @@ def get_mysql_metadata():
         return jsonify(metadata)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # Fetch MongoDB Metadata
 @app.route('/metadata/mongodb', methods=['GET'])
