@@ -1,3 +1,4 @@
+import datetime
 from flask import Flask, request, jsonify
 import mysql.connector
 from pymongo import MongoClient
@@ -85,14 +86,25 @@ def upload_json_to_mongodb():
 @app.route('/query/mysql', methods=['POST'])
 def execute_mysql_query():
     try:
+        # Extract the query from the request
         query = request.json['query']
-        print(q1.parse_and_generate_sql("get model of cars made by Toyota where in year 2019"))
+        print(f"Executing SQL query: {query}")  # Debug log
+
+        # Execute the SQL query
         cursor = mysql_conn.cursor(dictionary=True)
         cursor.execute(query)
         results = cursor.fetchall()
+        
+        # Serialize TIMESTAMP/DATETIME fields to string
+        for row in results:
+            for key, value in row.items():
+                if isinstance(value, (datetime.datetime, datetime.date)):
+                    row[key] = value.isoformat()  # Convert to ISO 8601 string
 
-        return jsonify(results)
+        print(f"Query results: {results}")  # Debug log
+        return jsonify(results)  # Return the results as JSON
     except Exception as e:
+        print(f"Error executing query: {e}")  # Log the error
         return jsonify({"error": str(e)}), 500
 
 

@@ -31,10 +31,9 @@ export class AppComponent {
     );
   }
   
-
+  // This is for the SQL query
   handleUserMessage(message: string) {
     // Immediately display the user's message in the chat window
-    
     this.chatService.addMessage({
       sender: 'user',
       content: message
@@ -56,22 +55,3 @@ export class AppComponent {
   }
 }
 
-
-// import { Component } from '@angular/core';
-// import { RouterOutlet } from '@angular/router';
-// import { ChatService } from './services/chatservice';
-
-// @Component({
-//   selector: 'app-root',
-//   // standalone: true,
-//   // imports: [RouterOutlet],
-//   templateUrl: './app.component.html',
-//   styleUrl: './app.component.css'
-// })
-// export class AppComponent {
-//   constructor(private chatService: ChatService) {}
-
-//   handleUserMessage(message: string) {
-//     this.chatService.addUserMessage(message);
-//   }
-// }

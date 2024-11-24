@@ -20,7 +20,7 @@ export class ChatService {
   
     this.http.post(`${this.baseUrl}/query/mysql`, query).subscribe(
       (response) => {
-        console.log('Response from backend (SQL):', response); // Debug log
+        //console.log('Response from backend (SQL):', response); // Debug log
         this.addMessage({
           sender: 'db',
           content: JSON.stringify(response, null, 2) // Format response for readability
@@ -28,7 +28,7 @@ export class ChatService {
         this.isLoadingSubject.next(false); // Hide the loading spinner
       },
       (error) => {
-        console.error('Error sending SQL query to backend:', error); // Debug log
+        //console.error('Error sending SQL query to backend:', error); // Debug log
         this.addMessage({
           sender: 'db',
           content: `Error: ${error.message}`
