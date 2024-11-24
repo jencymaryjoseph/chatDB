@@ -15,6 +15,25 @@ export class ChatService {
 
   constructor(private http: HttpClient) {}
 
+  uploadFile(formData: FormData, type: 'sql' | 'mongodb'): Observable<any> {
+    const endpoint = type === 'sql' ? '/upload/mysql' : '/upload/mongodb';
+    return this.http.post(`${this.baseUrl}${endpoint}`, formData);
+  }
+
+  uploadCSV(file: File, tableName: string): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('table', tableName);
+    return this.http.post(`${this.baseUrl}/upload/mysql`, formData);
+  }
+
+  uploadJSON(file: File, collectionName: string): Observable<any> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('collection', collectionName);
+    return this.http.post(`${this.baseUrl}/upload/mongodb`, formData);
+  }
+
   sendMessageToSQL(query: any): void {
     this.isLoadingSubject.next(true); // Show the loading spinner
   
