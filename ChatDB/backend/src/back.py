@@ -4,6 +4,7 @@ import mysql.connector
 from pymongo import MongoClient
 import csv
 from flask_cors import CORS
+from bson.json_util import dumps
 
 import queryMapper
 from queryMapper import parse_input, generate_query
@@ -136,6 +137,119 @@ def delete_mysql_table():
 
 # -----------------------MongoDB methods ------------------------
 
+
+@app.route('/sql-to-mongo-output', methods=['POST'])
+def sql_to_mongo_output():
+    try:
+        # Step 1: Get the SQL query from the request body
+        sql_query = request.json.get('sql_query')
+        if not sql_query:
+            return jsonify({"error": "SQL query not provided"}), 400
+
+        print(f"Received SQL Query: {sql_query}")
+
+        # Step 2: Convert SQL query to MongoDB query
+        mongodb_query = sql_to_mongodb(sql_query)
+        print(f"Generated MongoDB Query: {mongodb_query}")
+
+        # Step 3: Parse the MongoDB query for execution
+        import re
+        match = re.match(r"db\.(\w+)\.(\w+)\((.*)\)", mongodb_query.strip())
+        if not match:
+            return jsonify({"error": "Invalid MongoDB query format after conversion"}), 400
+
+        collection_name, method, args = match.groups()
+        print(f"Parsed collection: {collection_name}, method: {method}, args: {args}")
+
+        # Access the MongoDB collection
+        collection = mongo_db[collection_name]
+
+        # Safely evaluate the query arguments
+        from ast import literal_eval
+        try:
+            parsed_args = literal_eval(args) if args else {}
+        except Exception as e:
+            return jsonify({"error": f"Invalid query arguments: {str(e)}"}), 400
+
+        # Step 4: Execute the MongoDB query
+        if method == "find":
+            # Handle `find` queries
+            if isinstance(parsed_args, dict):
+                results = collection.find(parsed_args)
+            elif isinstance(parsed_args, list) and len(parsed_args) == 2:
+                results = collection.find(*parsed_args)  # Filter and projection
+            else:
+                return jsonify({"error": "Invalid arguments for 'find'."}), 400
+        elif method == "aggregate":
+            # Handle `aggregate` queries
+            if isinstance(parsed_args, list):
+                results = collection.aggregate(parsed_args)
+            else:
+                return jsonify({"error": "Invalid arguments for 'aggregate'."}), 400
+        else:
+            return jsonify({"error": f"Unsupported method '{method}'."}), 400
+
+        # Step 5: Serialize and return the results as JSON
+        return jsonify({"data": json.loads(dumps(results))}), 200
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@app.route('/query/mongodb', methods=['GET'])
+def execute_full_mongodb_query():
+    try:
+        # Extract the raw query from request parameters
+        raw_query = request.args.get('query')
+        if not raw_query:
+            return jsonify({"error": "Query parameter must be provided."}), 400
+
+        # Debug log to verify raw query
+        print(f"Received raw query: {raw_query}")
+
+        # Extract collection name, method, and arguments from the query
+        import re
+        match = re.match(r"db\.(\w+)\.(\w+)\((.*)\)", raw_query.strip())
+        if not match:
+            return jsonify({"error": "Invalid query format. Expected 'db.collection.method(...)'."}), 400
+
+        # Parse the collection name, method, and arguments
+        collection_name, method, args = match.groups()
+        print(f"Parsed collection: {collection_name}, method: {method}, args: {args}")
+
+        # Access the MongoDB collection
+        collection = mongo_db[collection_name]
+
+        # Parse the query arguments safely
+        from ast import literal_eval
+        try:
+            parsed_args = literal_eval(args) if args else {}
+        except Exception as e:
+            return jsonify({"error": f"Invalid query arguments: {str(e)}"}), 400
+
+        # Determine and execute the method dynamically
+        if method == "find":
+            # Execute the `find` query
+            if isinstance(parsed_args, dict):
+                results = collection.find(parsed_args)
+            elif isinstance(parsed_args, list) and len(parsed_args) == 2:
+                results = collection.find(*parsed_args)  # Handle filter and projection
+            else:
+                return jsonify({"error": "Invalid arguments for 'find'."}), 400
+        elif method == "aggregate":
+            # Execute the `aggregate` query
+            if isinstance(parsed_args, list):
+                results = collection.aggregate(parsed_args)
+            else:
+                return jsonify({"error": "Invalid arguments for 'aggregate'."}), 400
+        else:
+            return jsonify({"error": f"Unsupported method '{method}'."}), 400
+
+        # Serialize the results to JSON and return
+        return jsonify({"data": json.loads(dumps(results))})
+    except Exception as e:
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+
 # Upload Dataset to MongoDB
 import json
 
@@ -163,35 +277,35 @@ def upload_json_to_mongodb():
 
 
 # Execute Query in MongoDB
-from bson.json_util import dumps
-@app.route('/query/mongodb', methods=['POST'])
-def execute_mongodb_query():
-    try:
-        # Extract MongoDB query string from the request
-        raw_query = request.json.get('query')
-        collection_name = request.json.get('collection')
+# from bson.json_util import dumps
+# @app.route('/query/mongodb', methods=['POST'])
+# def execute_mongodb_query():
+#     try:
+#         # Extract MongoDB query string from the request
+#         raw_query = request.json.get('query')
+#         collection_name = request.json.get('collection')
         
-        if not raw_query or not collection_name:
-            return jsonify({"error": "Collection and query must be provided."}), 400
+#         if not raw_query or not collection_name:
+#             return jsonify({"error": "Collection and query must be provided."}), 400
 
-        # Safely evaluate the raw_query into a Python dictionary
-        try:
-            # Use `literal_eval` to avoid running arbitrary code
-            from ast import literal_eval
-            query = literal_eval(raw_query)
-        except Exception as e:
-            return jsonify({"error": f"Invalid MongoDB query format: {str(e)}"}), 400
+#         # Safely evaluate the raw_query into a Python dictionary
+#         try:
+#             # Use `literal_eval` to avoid running arbitrary code
+#             from ast import literal_eval
+#             query = literal_eval(raw_query)
+#         except Exception as e:
+#             return jsonify({"error": f"Invalid MongoDB query format: {str(e)}"}), 400
 
-        # Access the specified MongoDB collection
-        collection = mongo_db[collection_name]
+#         # Access the specified MongoDB collection
+#         collection = mongo_db[collection_name]
 
-        # Execute the query
-        results = collection.find(query)
+#         # Execute the query
+#         results = collection.find(query)
 
-        # Serialize results with bson.json_util.dumps
-        return jsonify({"data": json.loads(dumps(results))})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#         # Serialize results with bson.json_util.dumps
+#         return jsonify({"data": json.loads(dumps(results))})
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 # @app.route('/query/mongodb', methods=['POST'])
 # def execute_mongodb_query():
