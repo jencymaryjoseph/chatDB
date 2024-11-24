@@ -5,7 +5,10 @@ from pymongo import MongoClient
 import csv
 from flask_cors import CORS
 
-from sql_nlp import parse_and_generate_sql
+import queryMapper
+from queryMapper import parse_input, generate_query
+import nosqlConvert;
+from nosqlConvert import sql_to_mongodb
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Allow up to 16MB
@@ -15,7 +18,7 @@ CORS(app)
 mysql_conn = mysql.connector.connect(
     host="localhost", 
     user="root", 
-    password="Jesus&me2023!!", 
+    password="Jesus&me2023!!", #dont read my password
     database="chatdb_sql" 
 )
 
@@ -34,7 +37,9 @@ def nlq_to_sql():
             return jsonify({"error": "No NLQ provided."}), 400
 
         # Convert NLQ to SQL using the mapper
-        sql_query = parse_and_generate_sql(nlq)  # Assuming this is the function in your mapper
+        # sql_query = parse_and_generate_sql(nlq)  
+        pattern_key, placeholders = queryMapper.parse_input(nlq)
+        sql_query = queryMapper.generate_query(pattern_key, placeholders)
 
         # Return the SQL query
         return jsonify({"sql": sql_query})
@@ -159,22 +164,50 @@ def upload_json_to_mongodb():
 
 # Execute Query in MongoDB
 from bson.json_util import dumps
-
 @app.route('/query/mongodb', methods=['POST'])
 def execute_mongodb_query():
     try:
-        query = request.json['query']
-        collection_name = query['collection']
-        filter_query = query.get('filter', {})
+        # Extract MongoDB query string from the request
+        raw_query = request.json.get('query')
+        collection_name = request.json.get('collection')
+        
+        if not raw_query or not collection_name:
+            return jsonify({"error": "Collection and query must be provided."}), 400
 
-        # Access the MongoDB collection
+        # Safely evaluate the raw_query into a Python dictionary
+        try:
+            # Use `literal_eval` to avoid running arbitrary code
+            from ast import literal_eval
+            query = literal_eval(raw_query)
+        except Exception as e:
+            return jsonify({"error": f"Invalid MongoDB query format: {str(e)}"}), 400
+
+        # Access the specified MongoDB collection
         collection = mongo_db[collection_name]
-        results = collection.find(filter_query)
+
+        # Execute the query
+        results = collection.find(query)
 
         # Serialize results with bson.json_util.dumps
         return jsonify({"data": json.loads(dumps(results))})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# @app.route('/query/mongodb', methods=['POST'])
+# def execute_mongodb_query():
+#     try:
+#         query = request.json['query']
+#         collection_name = query['collection']
+#         filter_query = query.get('filter', {})
+
+#         # Access the MongoDB collection
+#         collection = mongo_db[collection_name]
+#         results = collection.find(filter_query)
+
+#         # Serialize results with bson.json_util.dumps
+#         return jsonify({"data": json.loads(dumps(results))})
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
 
 
 
