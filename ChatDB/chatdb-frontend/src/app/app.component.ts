@@ -33,25 +33,55 @@ export class AppComponent {
   
   // This is for the SQL query
   handleUserMessage(message: string) {
-    // Immediately display the user's message in the chat window
+    // Display the user's message
     this.chatService.addMessage({
       sender: 'user',
       content: message
     });
   
-    // Check if the input starts with 'SELECT', 'INSERT', etc., to identify SQL
-    if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE|SHOW)/i.test(message)) {
-      console.log('Detected SQL query:', message); // Debug log
+    // Send NLQ to backend
+    this.chatService.convertNLQToSQL(message).subscribe(
+      (response: any) => {
+        const sqlQuery = response.sql; // Assume the backend returns { sql: "SQL QUERY" }
   
-      const query = { query: message }; // Construct query object for backend
-      console.log('Sending SQL query to backend:', query);
-      this.chatService.sendMessageToSQL(query); // Send SQL query to backend
-    } else {
-      this.chatService.addMessage({
-        sender: 'db',
-        content: 'Error: Unrecognized command or query. Please enter a valid SQL query.'
-      });
-    }
+        // Display the generated SQL query
+        this.chatService.addMessage({
+          sender: 'db',
+          content: `Generated SQL query: ${sqlQuery}`
+        });
+  
+        // Execute the SQL query
+        this.chatService.sendMessageToSQL({ query: sqlQuery });
+      },
+      (error) => {
+        // Display error
+        this.chatService.addMessage({
+          sender: 'db',
+          content: `Error generating SQL query: ${error.message}`
+        });
+      }
+    );
   }
+  // handleUserMessage(message: string) {
+  //   // Immediately display the user's message in the chat window
+  //   this.chatService.addMessage({
+  //     sender: 'user',
+  //     content: message
+  //   });
+  
+  //   // Check if the input starts with 'SELECT', 'INSERT', etc., to identify SQL
+  //   if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE|SHOW)/i.test(message)) {
+  //     console.log('Detected SQL query:', message); // Debug log
+  
+  //     const query = { query: message }; // Construct query object for backend
+  //     console.log('Sending SQL query to backend:', query);
+  //     this.chatService.sendMessageToSQL(query); // Send SQL query to backend
+  //   } else {
+  //     this.chatService.addMessage({
+  //       sender: 'db',
+  //       content: 'Error: Unrecognized command or query. Please enter a valid SQL query.'
+  //     });
+  //   }
+  // }
 }
 

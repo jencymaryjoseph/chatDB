@@ -5,9 +5,7 @@ from pymongo import MongoClient
 import csv
 from flask_cors import CORS
 
-import queryMapper as q1
-
-
+from sql_nlp import parse_and_generate_sql
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Allow up to 16MB
@@ -25,7 +23,49 @@ mysql_conn = mysql.connector.connect(
 mongo_client = MongoClient("mongodb://localhost:27017/")  
 mongo_db = mongo_client["chatdb_nosql"]  
 
+# -----------------------SQL methods ------------------------
+# Convert NLQ to SQL
+@app.route('/nlq-to-sql', methods=['POST'])
+def nlq_to_sql():
+    try:
+        # Get the NLQ from the request
+        nlq = request.json.get('nlq')
+        if not nlq:
+            return jsonify({"error": "No NLQ provided."}), 400
 
+        # Convert NLQ to SQL using the mapper
+        sql_query = parse_and_generate_sql(nlq)  # Assuming this is the function in your mapper
+
+        # Return the SQL query
+        return jsonify({"sql": sql_query})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+# Execute Query in MySQL
+@app.route('/query/mysql', methods=['POST'])
+def execute_mysql_query():
+    try:
+        # Extract the query from the request
+        query = request.json['query']
+        print(f"Executing SQL query: {query}")  # Debug log
+
+        # Execute the SQL query
+        cursor = mysql_conn.cursor(dictionary=True)
+        cursor.execute(query)
+        results = cursor.fetchall()
+        
+        # Serialize TIMESTAMP/DATETIME fields to string
+        for row in results:
+            for key, value in row.items():
+                if isinstance(value, (datetime.datetime, datetime.date)):
+                    row[key] = value.isoformat()  # Convert to ISO 8601 string
+
+        print(f"Query results: {results}")  # Debug log
+        return jsonify(results)  # Return the results as JSON
+    except Exception as e:
+        print(f"Error executing query: {e}")  # Log the error
+        return jsonify({"error": str(e)}), 500
+    
 # Upload Dataset to MySQL
 @app.route('/upload/mysql', methods=['POST'])
 def upload_to_mysql():
@@ -57,6 +97,39 @@ def upload_to_mysql():
         return jsonify({"message": "Data uploaded successfully to MySQL."})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+    # Fetch MySQL Metadata
+@app.route('/metadata/mysql', methods=['GET'])
+def get_mysql_metadata():
+    try:
+        cursor = mysql_conn.cursor()
+        cursor.execute("SHOW TABLES")
+        tables = [table[0] for table in cursor.fetchall()]
+        metadata = {}
+        for table in tables:
+            cursor.execute(f"DESCRIBE {table}")
+            metadata[table] = [row[0] for row in cursor.fetchall()]
+        return jsonify(metadata)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+#Delete table from mySQL
+@app.route('/delete/mysql', methods=['POST'])
+def delete_mysql_table():
+    try:
+        table_name = request.json['table']
+
+        # Check if the table exists
+        cursor = mysql_conn.cursor()
+        cursor.execute(f"DROP TABLE IF EXISTS `{table_name}`")
+        mysql_conn.commit()
+
+        return jsonify({"message": f"Table `{table_name}` deleted successfully (if it existed)."})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+# -----------------------MongoDB methods ------------------------
 
 # Upload Dataset to MongoDB
 import json
@@ -82,30 +155,6 @@ def upload_json_to_mongodb():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Execute Query in MySQL
-@app.route('/query/mysql', methods=['POST'])
-def execute_mysql_query():
-    try:
-        # Extract the query from the request
-        query = request.json['query']
-        print(f"Executing SQL query: {query}")  # Debug log
-
-        # Execute the SQL query
-        cursor = mysql_conn.cursor(dictionary=True)
-        cursor.execute(query)
-        results = cursor.fetchall()
-        
-        # Serialize TIMESTAMP/DATETIME fields to string
-        for row in results:
-            for key, value in row.items():
-                if isinstance(value, (datetime.datetime, datetime.date)):
-                    row[key] = value.isoformat()  # Convert to ISO 8601 string
-
-        print(f"Query results: {results}")  # Debug log
-        return jsonify(results)  # Return the results as JSON
-    except Exception as e:
-        print(f"Error executing query: {e}")  # Log the error
-        return jsonify({"error": str(e)}), 500
 
 
 # Execute Query in MongoDB
@@ -127,20 +176,6 @@ def execute_mongodb_query():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Fetch MySQL Metadata
-@app.route('/metadata/mysql', methods=['GET'])
-def get_mysql_metadata():
-    try:
-        cursor = mysql_conn.cursor()
-        cursor.execute("SHOW TABLES")
-        tables = [table[0] for table in cursor.fetchall()]
-        metadata = {}
-        for table in tables:
-            cursor.execute(f"DESCRIBE {table}")
-            metadata[table] = [row[0] for row in cursor.fetchall()]
-        return jsonify(metadata)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 # Fetch MongoDB Metadata
@@ -157,20 +192,7 @@ def get_mongodb_metadata():
         return jsonify({"error": str(e)}), 500
     
 
-#Delete table from mySQL
-@app.route('/delete/mysql', methods=['POST'])
-def delete_mysql_table():
-    try:
-        table_name = request.json['table']
 
-        # Check if the table exists
-        cursor = mysql_conn.cursor()
-        cursor.execute(f"DROP TABLE IF EXISTS `{table_name}`")
-        mysql_conn.commit()
-
-        return jsonify({"message": f"Table `{table_name}` deleted successfully (if it existed)."})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 #Delete collection from MongoDB
 @app.route('/delete/mongodb', methods=['POST'])

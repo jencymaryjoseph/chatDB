@@ -34,6 +34,10 @@ export class ChatService {
     return this.http.post(`${this.baseUrl}/upload/mongodb`, formData);
   }
 
+  convertNLQToSQL(nlq: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/nlq-to-sql`, { nlq });
+  }
+
   sendMessageToSQL(query: any): void {
     this.isLoadingSubject.next(true); // Show the loading spinner
   
