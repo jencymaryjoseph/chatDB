@@ -34,32 +34,25 @@ export class AppComponent {
 
   handleUserMessage(message: string) {
     // Immediately display the user's message in the chat window
+    
     this.chatService.addMessage({
       sender: 'user',
       content: message
     });
   
-    let query;
-    try {
-      // Parse the full query as JSON
-      query = JSON.parse(message);
-      console.log('Parsed query:', query); // Debug log
+    // Check if the input starts with 'SELECT', 'INSERT', etc., to identify SQL
+    if (/^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|TRUNCATE|SHOW)/i.test(message)) {
+      console.log('Detected SQL query:', message); // Debug log
   
-      // Validate query structure
-      if (!query.collection || !query.filter) {
-        throw new Error('Invalid query structure: "collection" and "filter" fields are required.');
-      }
-    } catch (error) {
-      console.error('Invalid query format:', error);
+      const query = { query: message }; // Construct query object for backend
+      console.log('Sending SQL query to backend:', query);
+      this.chatService.sendMessageToSQL(query); // Send SQL query to backend
+    } else {
       this.chatService.addMessage({
         sender: 'db',
-        content: 'Error: Invalid query format. Ensure the JSON contains "collection" and "filter".'
+        content: 'Error: Unrecognized command or query. Please enter a valid SQL query.'
       });
-      return;
     }
-  
-    console.log('Sending query to backend:', query); // Debug log
-    this.chatService.sendMessageToMongoDB(query);
   }
 }
 

@@ -14,6 +14,29 @@ export class ChatService {
   isLoading$ = this.isLoadingSubject.asObservable();
 
   constructor(private http: HttpClient) {}
+
+  sendMessageToSQL(query: any): void {
+    this.isLoadingSubject.next(true); // Show the loading spinner
+  
+    this.http.post(`${this.baseUrl}/query/mysql`, query).subscribe(
+      (response) => {
+        console.log('Response from backend (SQL):', response); // Debug log
+        this.addMessage({
+          sender: 'db',
+          content: JSON.stringify(response, null, 2) // Format response for readability
+        });
+        this.isLoadingSubject.next(false); // Hide the loading spinner
+      },
+      (error) => {
+        console.error('Error sending SQL query to backend:', error); // Debug log
+        this.addMessage({
+          sender: 'db',
+          content: `Error: ${error.message}`
+        });
+        this.isLoadingSubject.next(false); // Hide the loading spinner
+      }
+    );
+  }
   
   sendMessageToMongoDB(query: any): void {
     this.isLoadingSubject.next(true); // Show the loading spinner
