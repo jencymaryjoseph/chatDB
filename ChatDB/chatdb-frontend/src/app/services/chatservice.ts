@@ -38,6 +38,10 @@ export class ChatService {
     return this.http.post(`${this.baseUrl}/nlq-to-sql`, { nlq });
   }
 
+  convertNLQToMongo(nlq: string): Observable<any> {
+    return this.http.post(`${this.baseUrl}/nlq-to-mongo`, { nlq });
+  }
+
   sendMessageToSQL(query: any): void {
     this.isLoadingSubject.next(true); // Show the loading spinner
   
@@ -61,28 +65,31 @@ export class ChatService {
     );
   }
   
-  sendMessageToMongoDB(query: any): void {
+  sendMessageToMongoDB(query: any): Observable<any> {
     this.isLoadingSubject.next(true); // Show the loading spinner
-    this.http.post(`${this.baseUrl}/query/mongodb`, query).subscribe(
-      (response) => {
-        console.log('Response from backend:', response); // Debug log
-        this.addMessage({
-          sender: 'db',
-          content: JSON.stringify(response, null, 2) // Format response for readability
-        });
-        this.isLoadingSubject.next(false); // Hide the loading spinner
-      },
-      (error) => {
-        console.error('Error sending message to MongoDB:', error); // Debug log
-        this.addMessage({
-          sender: 'db',
-          content: `Error: ${error.message}`
-        });
-        this.isLoadingSubject.next(false); // Hide the loading spinner
-      }
-    );
+    console.log('Sending MongoDB Query:', query); // Debug log
+    const queryParam = encodeURIComponent(query.query); // Encode query parameter
+    // this.http.get(`${this.baseUrl}/query/mongodb?query=${queryParam}`).subscribe(
+    //   (response) => {
+    //     console.log('Response from backend (MongoDB):', response); // Debug log
+    //     this.addMessage({
+    //       sender: 'db',
+    //       content: JSON.stringify(response, null, 2) // Format response for readability
+    //     });
+    //     this.isLoadingSubject.next(false); // Hide the loading spinner
+    //   },
+    //   (error) => {
+    //     console.error('Error sending MongoDB query:', error); // Debug log
+    //     this.addMessage({
+    //       sender: 'db',
+    //       content: `Error: ${error.message}`
+    //     });
+    //     this.isLoadingSubject.next(false); // Hide the loading spinner
+    //   }
+    // );
+    return this.http.post(`${this.baseUrl}/query/mongodb`, query);
+    //return this.http.get(`${this.baseUrl}/query/mongodb?query=${queryParam}`);
   }
-
   fetchMongoDBMetadata(): Observable<any> {
     console.log('Sending request to fetch MongoDB metadata...');
     return this.http.get(`${this.baseUrl}/metadata/mongodb`);

@@ -110,7 +110,7 @@ aggregate_synonym_mapping = {
 # List of stop words to exclude
 stop_words = ["of", "and", "in", "on", "at", "by", "for"]
 
-table_name = "CARSALES"
+table_name = "carsales"
 
 def match_column(input_term, schema):
     input_term = input_term.lower()

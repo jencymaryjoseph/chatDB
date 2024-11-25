@@ -30,7 +30,85 @@ export class AppComponent {
       }
     );
   }
+  // Handle queries for both MySQL and MongoDB
+  handleUserQuery(event: { query: string; type: 'mysql' | 'mongodb' }) {
+    const { query, type } = event;
+
+    // Display the user's query in the chat window
+    this.chatService.addMessage({
+      sender: 'user',
+      content: query
+    });
+
+    if (type === 'mysql') {
+      // Handle MySQL Query
+      this.chatService.convertNLQToSQL(query).subscribe(
+        (response: any) => {
+          const sqlQuery = response.sql; // Assume the backend returns { sql: "SQL QUERY" }
+
+          // Display the generated SQL query
+          this.chatService.addMessage({
+            sender: 'db',
+            content: `Generated SQL query: ${sqlQuery}`
+          });
+
+          // Execute the SQL query
+          this.chatService.sendMessageToSQL({ query: sqlQuery });
+        },
+        (error) => {
+          // Display error
+          this.chatService.addMessage({
+            sender: 'db',
+            content: `Error generating SQL query: ${error.message}`
+          });
+        }
+      );
+    } else if (type === 'mongodb') {
+      this.chatService.convertNLQToMongo(query).subscribe(
+          (response: any) => {
+              console.log('Response from nlq-to-mongo:', response);
+              const mongoQuery = response.mongo_query; // Extract the MongoDB query
   
+              if (!mongoQuery) {
+                  console.error('MongoDB query is undefined');
+                  this.chatService.addMessage({
+                      sender: 'db',
+                      content: 'Error: MongoDB query is undefined in response',
+                  });
+                  return;
+              }
+  
+              // Debug log for MongoDB query
+              console.log('Mongo Query:', mongoQuery);
+  
+              // Send MongoDB query to the backend
+              this.chatService.sendMessageToMongoDB({ query: mongoQuery }).subscribe(
+                (response) => {
+                  console.log('MongoDB query response:', response);
+                  this.chatService.addMessage({
+                    sender: 'db',
+                    content: JSON.stringify(response.data)
+                  });
+                },
+                (error) => {
+                  console.error('Error sending MongoDB query:', error);
+                  this.chatService.addMessage({
+                    sender: 'db',
+                    content: `Error: ${error.message}`
+                  });
+                }
+              );
+          },
+          (error: any) => {
+              console.error('Error generating MongoDB query:', error);
+              this.chatService.addMessage({
+                  sender: 'db',
+                  content: `Error generating MongoDB query: ${error.message}`
+              });
+          }
+      );
+  }
+  }
   // This is for the SQL query
   handleUserMessage(message: string) {
     // Display the user's message

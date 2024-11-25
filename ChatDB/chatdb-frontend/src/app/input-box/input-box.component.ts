@@ -10,7 +10,9 @@ export class InputBoxComponent {
   query: string = '';
   showAttachmentMenu = false;
   showDropdown: boolean = false;
-  @Output() sendMessage = new EventEmitter<string>();
+  //@Output() sendMessage = new EventEmitter<{ query: string; type: string }>();
+  //@Output() sendQuery = new EventEmitter<{ query: string; type: string }>();
+  @Output() sendQuery = new EventEmitter<{ query: string; type: 'mysql' | 'mongodb' }>();
 
 
   constructor(private chatService: ChatService) {}
@@ -66,11 +68,17 @@ export class InputBoxComponent {
   
     inputElement.value = ''; // Reset file input
   }
-
-  submitQuery() {
+  submitQuery(type: 'mysql' | 'mongodb') {
     if (this.query.trim()) {
-      this.sendMessage.emit(this.query);
-      this.query = '';
+      this.sendQuery.emit({ query: this.query, type }); // Use explicit type
+      this.query = ''; // Reset query after emitting
     }
   }
+
+  // submitQuery() {
+  //   if (this.query.trim()) {
+  //     this.sendMessage.emit(this.query);
+  //     this.query = '';
+  //   }
+  // }
 }
