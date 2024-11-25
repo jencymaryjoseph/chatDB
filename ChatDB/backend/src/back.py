@@ -19,8 +19,8 @@ CORS(app)
 mysql_conn = mysql.connector.connect(
     host="localhost", 
     user="root", 
-    password="Jesus&me2023!!", #dont read my password
-    database="chatdb_sql" 
+    # password="Jesus&me2023!!", #dont read my password
+    # database="chatdb_sql" 
 )
 
 # Local MongoDB Connection
@@ -28,24 +28,24 @@ mongo_client = MongoClient("mongodb://localhost:27017/")
 mongo_db = mongo_client["chatdb_nosql"]  
 
 # -----------------------SQL methods ------------------------
-# Convert NLQ to SQL
-@app.route('/nlq-to-sql', methods=['POST'])
-def nlq_to_sql():
-    try:
-        # Get the NLQ from the request
-        nlq = request.json.get('nlq')
-        if not nlq:
-            return jsonify({"error": "No NLQ provided."}), 400
+# # Convert NLQ to SQL
+# @app.route('/nlq-to-sql', methods=['POST'])
+# def nlq_to_sql():
+#     try:
+#         # Get the NLQ from the request
+#         nlq = request.json.get('nlq')
+#         if not nlq:
+#             return jsonify({"error": "No NLQ provided."}), 400
 
-        # Convert NLQ to SQL using the mapper
-        # sql_query = parse_and_generate_sql(nlq)  
-        pattern_key, placeholders = queryMapper.parse_input(nlq)
-        sql_query = queryMapper.generate_query(pattern_key, placeholders)
+#         # Convert NLQ to SQL using the mapper
+#         # sql_query = parse_and_generate_sql(nlq)  
+#         pattern_key, placeholders = queryMapper.parse_input(nlq)
+#         sql_query = queryMapper.generate_query(pattern_key, placeholders)
 
-        # Return the SQL query
-        return jsonify({"sql": sql_query})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#         # Return the SQL query
+#         return jsonify({"sql": sql_query})
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
     
 # Execute Query in MySQL
 @app.route('/query/mysql', methods=['POST'])
@@ -138,40 +138,112 @@ def delete_mysql_table():
 # -----------------------MongoDB methods ------------------------
 
 
-@app.route('/sql-to-mongo-output', methods=['POST'])
-def sql_to_mongo_output():
+# @app.route('/sql-to-mongo-output', methods=['POST'])
+# def sql_to_mongo_output():
+#     try:
+#         # Step 1: Get the SQL query from the request body
+#         sql_query = request.json.get('sql_query')
+#         if not sql_query:
+#             return jsonify({"error": "SQL query not provided"}), 400
+
+#         print(f"Received SQL Query: {sql_query}")
+
+#         # Step 2: Convert SQL query to MongoDB query
+#         mongodb_query = sql_to_mongodb(sql_query)
+#         print(f"Generated MongoDB Query: {mongodb_query}")
+
+#         # Step 3: Parse the MongoDB query for execution
+#         import re
+#         match = re.match(r"db\.(\w+)\.(\w+)\((.*)\)", mongodb_query.strip())
+#         if not match:
+#             return jsonify({"error": "Invalid MongoDB query format after conversion"}), 400
+
+#         collection_name, method, args = match.groups()
+#         print(f"Parsed collection: {collection_name}, method: {method}, args: {args}")
+
+#         # Access the MongoDB collection
+#         collection = mongo_db[collection_name]
+
+#         # Safely evaluate the query arguments
+#         from ast import literal_eval
+#         try:
+#             parsed_args = literal_eval(args) if args else {}
+#         except Exception as e:
+#             return jsonify({"error": f"Invalid query arguments: {str(e)}"}), 400
+
+#         # Step 4: Execute the MongoDB query
+#         if method == "find":
+#             # Handle `find` queries
+#             if isinstance(parsed_args, dict):
+#                 results = collection.find(parsed_args)
+#             elif isinstance(parsed_args, list) and len(parsed_args) == 2:
+#                 results = collection.find(*parsed_args)  # Filter and projection
+#             else:
+#                 return jsonify({"error": "Invalid arguments for 'find'."}), 400
+#         elif method == "aggregate":
+#             # Handle `aggregate` queries
+#             if isinstance(parsed_args, list):
+#                 results = collection.aggregate(parsed_args)
+#             else:
+#                 return jsonify({"error": "Invalid arguments for 'aggregate'."}), 400
+#         else:
+#             return jsonify({"error": f"Unsupported method '{method}'."}), 400
+
+#         # Step 5: Serialize and return the results as JSON
+#         return jsonify({"data": json.loads(dumps(results))}), 200
+#     except Exception as e:
+#         print(f"Error: {e}")
+#         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+@app.route('/nlq-to-mongo', methods=['POST'])
+def nlq_to_mongo():
     try:
-        # Step 1: Get the SQL query from the request body
-        sql_query = request.json.get('sql_query')
+        # Step 1: Get the NLQ from the request
+        nlq = request.json.get('nlq')
+        if not nlq:
+            return jsonify({"error": "No NLQ provided."}), 400
+
+        print(f"Received NLQ: {nlq}")
+
+        # Step 2: Convert NLQ to SQL
+        pattern_key, placeholders = queryMapper.parse_input(nlq)
+        sql_query = queryMapper.generate_query(pattern_key, placeholders)
         if not sql_query:
-            return jsonify({"error": "SQL query not provided"}), 400
+            return jsonify({"error": "Failed to generate SQL query."}), 500
 
-        print(f"Received SQL Query: {sql_query}")
+        # Debug SQL query before and after removing the semicolon
+        print(f"Generated SQL Query (raw): {sql_query}")
+        sql_query = sql_query.rstrip(';')
+        print(f"Generated SQL Query (cleaned): {sql_query}")
 
-        # Step 2: Convert SQL query to MongoDB query
+        # Step 3: Convert SQL query to MongoDB query
         mongodb_query = sql_to_mongodb(sql_query)
+        if not mongodb_query:
+            return jsonify({"error": "Failed to generate MongoDB query."}), 500
+
         print(f"Generated MongoDB Query: {mongodb_query}")
 
-        # Step 3: Parse the MongoDB query for execution
+        # Step 4: Parse the MongoDB query
         import re
         match = re.match(r"db\.(\w+)\.(\w+)\((.*)\)", mongodb_query.strip())
         if not match:
             return jsonify({"error": "Invalid MongoDB query format after conversion"}), 400
 
         collection_name, method, args = match.groups()
-        print(f"Parsed collection: {collection_name}, method: {method}, args: {args}")
+        print(f"Parsed MongoDB - Collection: {collection_name}, Method: {method}, Args: {args}")
 
-        # Access the MongoDB collection
+        # Step 5: Access the MongoDB collection
         collection = mongo_db[collection_name]
 
         # Safely evaluate the query arguments
         from ast import literal_eval
         try:
             parsed_args = literal_eval(args) if args else {}
+            print(f"Parsed Arguments for MongoDB Query: {parsed_args}")
         except Exception as e:
             return jsonify({"error": f"Invalid query arguments: {str(e)}"}), 400
 
-        # Step 4: Execute the MongoDB query
+        # Step 6: Execute the MongoDB query
         if method == "find":
             # Handle `find` queries
             if isinstance(parsed_args, dict):
@@ -189,8 +261,11 @@ def sql_to_mongo_output():
         else:
             return jsonify({"error": f"Unsupported method '{method}'."}), 400
 
-        # Step 5: Serialize and return the results as JSON
-        return jsonify({"data": json.loads(dumps(results))}), 200
+        # Step 7: Serialize and return the results as JSON
+        data = json.loads(dumps(results))
+        print(f"Final MongoDB Results: {data}")
+        return jsonify({"data": data}), 200
+
     except Exception as e:
         print(f"Error: {e}")
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
