@@ -112,7 +112,7 @@ aggregate_synonym_mapping = {
 # List of stop words to exclude
 stop_words = ["of", "and", "in", "on", "at", "by", "for"]
 
-table_name = "videogames"
+table_name = ""
 
 def match_column(input_term, schema):
     input_term = input_term.lower()
@@ -142,7 +142,7 @@ def match_operator(input_terms):
     return None, 0
 
 
-def parse_input(text):
+def parse_input(text,table_name):
     # Ensure NLTK stopwords are downloaded
     nltk.download('stopwords', quiet=True)
     from nltk.corpus import stopwords
