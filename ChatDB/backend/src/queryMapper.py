@@ -5,30 +5,31 @@ import nltk
 # Dataset schema remains the same
 dataset_schema = {
     "year": ["year", "model year", "manufacturing year", "production year","release year", "launch year", "publication year", "production year"],
-    "make": ["company", "brand", "manufacturer", "automaker"],
-    "model": ["model", "car model", "vehicle model", "make", "cars","model of car","car sold"],
+    "company": ["company", "brand", "manufacturer", "automaker"],
+    "model": ["model", "car model", "vehicle model", "make", "cars","model of car","car sold","car"],
     "body": ["body", "car body", "vehicle type", "chassis"],
     "transmission": ["transmission", "gearbox", "drive system", "transmission type"],
     "odometer": ["odometer", "mileage", "distance traveled", "miles"],
     "color": ["color", "paint", "shade", "hue"],
     "interior": ["interior", "inside", "cabin", "seating"],
     "sellingprice": ["selling price of car", "price", "cost", "value","price sold"],
-    "name": ["title", "game name", "video game title", "game"],
+    "name": ["title", "game name", "video game title","game","gamename"],
     "platform": ["console", "gaming platform", "system", "device"],
     "genre": ["category", "game type", "game category", "style", "genre of games"],
-    "publisher": ["developer", "game publisher", "studio", "producer"],
+    "publisher": ["developer", "game publisher", "studio", "producer","publisher"],
     "NA_Sales": ["North America sales", "NA revenue", "USA sales", "American sales"],
     "EU_Sales": ["Europe sales", "EU revenue", "European sales", "EMEA sales"],
     "JP_Sales": ["Japan sales", "JP revenue", "Japanese sales", "Asia sales"],
     "other_sales": ["miscellaneous sales", "other region sales", "additional sales", "ROW sales"],
-    "global_sales": ["worldwide sales", "total sales", "global revenue", "all-region sales"],
+    "global_sales": ["worldwide sales", "total sales", "global revenue", "all-region sales","globalsales","global sales"],
     "order_id": ["transaction ID", "order number", "receipt number", "purchase ID"],
-    "item_name": ["product name", "food item", "menu item", "dish"],
-    "item_type": ["category", "food type", "cuisine type", "menu category"],
-#"item_price": ["price per item", "unit price", "cost of item", "rate"],
-    "quantity": ["amount", "number of items", "count", "item quantity"],
+    "item_name": ["item name","product name", "food item", "menu item", "dish"],
+    "item_type": ["foodtype","category", "food type", "cuisine type", "menu category","itemtype"],
+    "item_price": ["item price","food price","price per item", "unit price", "cost of item", "rate"],
+    "quantity": ["number of items", "count", "item quantity"],
     "transaction_amount": ["total amount", "order value", "bill amount", "payment total"],
-    "transaction_type": ["payment method", "transaction mode", "billing type", "payment type"]
+    "transaction_type": ["payment method", "transaction mode", "billing type", "payment type","transaction_type", "transactiontype"],
+    "date": ["date", "dates", "transaction date", "day", "days", "transaction_date"],
 
 }
 
@@ -60,7 +61,7 @@ operators = {
 }
 
 
-# Patterns updated with new pattern for HAVING
+# Patterns for SQL with new pattern for HAVING
 patterns = {
     "aggregate <A> by <B>": """SELECT {B}, {aggregate_function}({A}) AS {alias}
 FROM {table}
@@ -78,6 +79,7 @@ WHERE {B} {op} {value}{order_clause}{limit_clause};""",
     "retrieve <A>": """SELECT {A}
 FROM {table}{order_clause}{limit_clause};""",
 }
+
 
 
 
@@ -110,16 +112,13 @@ aggregate_synonym_mapping = {
 # List of stop words to exclude
 stop_words = ["of", "and", "in", "on", "at", "by", "for"]
 
-table_name = "carsales"
+table_name = "videogames"
 
 def match_column(input_term, schema):
     input_term = input_term.lower()
     for column, terms in schema.items():
         if input_term == column.lower() or input_term in [term.lower() for term in terms]:
-            if column == 'sales':
-                return 'transaction_qty * unit_price'
-            else:
-                return column
+            return column
     # Singularize if necessary
     if input_term.endswith('es'):
         input_term_singular = input_term[:-2]
@@ -130,10 +129,7 @@ def match_column(input_term, schema):
     if input_term_singular != input_term:
         for column, terms in schema.items():
             if input_term_singular == column.lower() or input_term_singular in [term.lower() for term in terms]:
-                if column == 'sales':
-                    return 'transaction_qty * unit_price'
-                else:
-                    return column
+                return column
     return None
 
 def match_operator(input_terms):
@@ -155,7 +151,7 @@ def parse_input(text):
     stop_words = set(stopwords.words('english'))
     essential_keywords = {'retrieve', 'aggregate', 'where', 'having', 'by', 'order', 'group', 'select', 'top', 'bottom', 'on', 'a', 'than', 'and', 'to', 'not', 'or', 'of', 'is'}
     stop_words = stop_words - essential_keywords
-
+    stop_words.add('data')
     # Remove unnecessary punctuation (keep operator symbols, slashes, quotes, and commas)
     operator_symbols = set(['=', '>', '<', '!', '%'])
     punctuation_to_remove = ''.join(c for c in string.punctuation if c not in operator_symbols and c not in ['/', "'", ','])
@@ -349,7 +345,7 @@ def parse_input(text):
                     order_dir_sql = 'DESC'
                 else:
                     order_dir_sql = 'ASC'
-                order_clause = f"\nORDER BY {order_column} {order_dir_sql}"
+                order_clause = f"\nORDER BY {aggregate_function.lower()}_{alias} {order_dir_sql}"
             else:
                 order_clause = ''
 
@@ -363,7 +359,7 @@ def parse_input(text):
                 "alias": f"{aggregate_function.lower()}_{alias}",
                 "op": operator,
                 "value": value,
-                "order_column": order_clause,
+                "order_clause": order_clause,
                 "limit_clause": limit_clause  # Include limit_clause here
             }
 
@@ -424,11 +420,16 @@ def parse_input(text):
                     # Maybe the ordering is on the alias
                     order_column_normalized = order_column_raw.lower().replace(' ', '_')
                     possible_alias = f"{aggregate_function.lower()}_{alias}"
+                    print("order_column_normalized",order_column_normalized)
+                    print("possible_alias",possible_alias)
                     if order_column_normalized == possible_alias.lower():
+                        print("if here")
                         order_column = possible_alias
                     else:
-                        print(f"Error: Unable to match ordering column '{order_column_raw}'.")
-                        return None, {}
+                        # print(f"Error: Unable to match ordering column '{order_column_raw}'.")
+                        # return None, {}
+                        print("else here")
+                        order_column = possible_alias
                 # Determine order direction
                 if order_direction.lower() in ['descending', 'desc', 'highest']:
                     order_dir_sql = 'DESC'
