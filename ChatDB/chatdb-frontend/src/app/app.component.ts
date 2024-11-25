@@ -67,7 +67,7 @@ export class AppComponent {
       this.chatService.convertNLQToMongo(query).subscribe(
           (response: any) => {
               console.log('Response from nlq-to-mongo:', response);
-              const mongoQuery = response.mongo_query; // Extract the MongoDB query
+              const mongoQuery = response.data.query; // Extract the MongoDB query
   
               if (!mongoQuery) {
                   console.error('MongoDB query is undefined');
@@ -77,9 +77,12 @@ export class AppComponent {
                   });
                   return;
               }
+
+              this.chatService.addMessage({
+                sender: 'db',
+                content: `Generated Mongo query: ${mongoQuery}`
+              });
   
-              // Debug log for MongoDB query
-              console.log('Mongo Query:', mongoQuery);
   
               // Send MongoDB query to the backend
               this.chatService.sendMessageToMongoDB({ query: mongoQuery }).subscribe(
@@ -87,8 +90,9 @@ export class AppComponent {
                   console.log('MongoDB query response:', response);
                   this.chatService.addMessage({
                     sender: 'db',
-                    content: JSON.stringify(response.data)
+                    content: JSON.stringify({ type: 'mongodb', data: response.data })
                   });
+                  this.chatService.isLoadingSubject.next(false)
                 },
                 (error) => {
                   console.error('Error sending MongoDB query:', error);
@@ -96,6 +100,7 @@ export class AppComponent {
                     sender: 'db',
                     content: `Error: ${error.message}`
                   });
+                  this.chatService.isLoadingSubject.next(false)
                 }
               );
           },

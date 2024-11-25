@@ -38,4 +38,34 @@
   tbody tr:nth-child(even) {
     background-color: #f9f9f9;
   }
+
+  .mongo-documents {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Space between documents */
+  }
   
+  .mongo-document {
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 14px;
+    white-space: pre-wrap; /* Ensure line breaks */
+    word-break: break-word; /* Break long words if necessary */
+  }
+  
+  .document-line {
+    margin-bottom: 5px; /* Space between key-value pairs */
+  }
+  
+  .document-key {
+    font-weight: bold;
+    color: #333;
+    margin-right: 10px;
+  }
+  
+  .document-value {
+    color: #555;
+  }

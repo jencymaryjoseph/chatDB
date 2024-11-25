@@ -20,6 +20,17 @@
       </tbody>
     </table>
   </div>
+
+  <ng-template #mongoView>
+    <div class="mongo-documents" *ngIf="isMongoData(); else defaultView">
+      <div *ngFor="let doc of getParsedContent()" class="mongo-document">
+        <div *ngFor="let key of getObjectKeys(doc)" class="document-line">
+          <span class="document-key">{{ key }}:</span>
+          <span class="document-value">{{ doc[key] }}</span>
+        </div>
+      </div>
+    </div>
+  </ng-template>
   
   <ng-template #defaultView>
     <div class="message-content">

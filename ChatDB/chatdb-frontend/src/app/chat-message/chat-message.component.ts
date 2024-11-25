@@ -33,6 +33,16 @@ export class ChatMessageComponent {
     return [];
   }
 
+  isMongoData(): boolean {
+    const parsedContent = this.getParsedContent();
+    return Array.isArray(parsedContent) &&
+           parsedContent.every((item: any) => typeof item === 'object' && '_id' in item);
+  }
+
+  getObjectKeys(doc: any): string[] {
+    return Object.keys(doc);
+  }
+
   isTableData(): boolean {
     let parsedContent;
     try {
@@ -62,7 +72,7 @@ export class ChatMessageComponent {
       console.error('Failed to parse JSON content:', error);
       return [];
     }
-    console.log('Parsed content:', parsedContent);
+    // console.log('Parsed content:', parsedContent);
     if (Array.isArray(parsedContent) && parsedContent.length > 0) {
       return Object.keys(parsedContent[0]);
     }

@@ -8,7 +8,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
 export class ChatService {
   private baseUrl = 'http://localhost:5004'; // Flask backend base URL
   private messagesSubject = new BehaviorSubject<{ sender: string, content: string }[]>([]);
-  private isLoadingSubject = new BehaviorSubject<boolean>(false);
+  public isLoadingSubject = new BehaviorSubject<boolean>(false);
 
   messages$ = this.messagesSubject.asObservable();
   isLoading$ = this.isLoadingSubject.asObservable();

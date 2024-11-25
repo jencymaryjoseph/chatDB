@@ -264,8 +264,12 @@ def nlq_to_mongo():
 
         # Step 7: Serialize and return the results as JSON
         data = json.loads(dumps(results))
-        print(f"Final MongoDB Results: {data}")
-        return jsonify({"data": data}), 200
+        response_data = {
+            "query": mongodb_query,  # Include the query as part of the data
+            "results": data          # Include the original query results
+        }
+        print(f"Final MongoDB Response: {response_data}")
+        return jsonify({"data": response_data}), 200
 
     except Exception as e:
         print(f"Error: {e}")
