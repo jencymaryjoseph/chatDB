@@ -13,7 +13,7 @@ dataset_schema = {
     "color": ["color", "paint", "shade", "hue"],
     "interior": ["interior", "inside", "cabin", "seating"],
     "sellingprice": ["selling price of car", "price", "cost", "value","price sold"],
-    "name": ["title", "game name", "video game title","game","gamename"],
+    "vid_game": ["title", "game name", "video game title","game","gamename","games"],
     "platform": ["console", "gaming platform", "system", "device"],
     "genre": ["category", "game type", "game category", "style", "genre of games"],
     "publisher": ["developer", "game publisher", "studio", "producer","publisher"],
@@ -87,7 +87,7 @@ aggregate_synonyms = ["total", "sum", "calculate", "compute", "aggregate", "add 
 retrieve_synonyms = ["list", "show", "display", "retrieve", "get", "fetch"]
 order_synonyms = ["order by", "ordered by", "sort by", "sorted by", "arranged by", "based on", "highest", 'lowest']
 order_directions = ["ascending", "asc", "descending", "desc", "highest number", "ascending order", "descending order"]
-limit_synonyms = ["top", "first", "highest", "most", "bottom", "last", "lowest", "least"]
+limit_synonyms = ["top", "first", "highest", "most", "bottom", "last", "lowest", "least", "worst"]
 # Aggregate functions
 aggregate_functions = ["sum", "average", "count", "min", "max"]
 
@@ -112,7 +112,7 @@ aggregate_synonym_mapping = {
 # List of stop words to exclude
 stop_words = ["of", "and", "in", "on", "at", "by", "for"]
 
-table_name = ""
+table_name = "vgsales1"
 
 def match_column(input_term, schema):
     input_term = input_term.lower()
@@ -175,7 +175,7 @@ def parse_input(text,table_name):
     # Ordering synonyms and direction
 
     # Limit synonyms
-    limit_synonyms = ["top", "first", "highest", "most", "bottom", "last", "lowest", "least"]
+    limit_synonyms = ["top", "first", "highest", "most", "bottom", "last", "lowest", "least", "worst"]
 
     # Initialize order and limit placeholders
     order_column_raw = None
@@ -195,7 +195,7 @@ def parse_input(text,table_name):
             # Determine order direction based on synonym
             if synonym in ['top', 'first', 'highest', 'most']:
                 order_direction = 'desc'
-            elif synonym in ['bottom', 'last', 'lowest', 'least']:
+            elif synonym in ['bottom', 'last', 'lowest', 'least', 'worst']:
                 order_direction = 'asc'
             break
 
@@ -435,7 +435,8 @@ def parse_input(text,table_name):
                     order_dir_sql = 'DESC'
                 else:
                     order_dir_sql = 'ASC'
-                order_clause = f"\nORDER BY {order_column} {order_dir_sql}"
+                #order_clause = f"\nORDER BY {order_column} {order_dir_sql}"
+                order_clause = f"\nORDER BY  {aggregate_function.lower()}_{alias} {order_dir_sql}"
             else:
                 # No ordering specified
                 order_clause = ''
